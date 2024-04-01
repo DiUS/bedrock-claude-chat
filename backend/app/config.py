@@ -5,7 +5,7 @@ GENERATION_CONFIG = {
     "max_tokens": 2000,
     "top_k": 250,
     "top_p": 0.999,
-    "temperature": 1,
+    "temperature": 0,
     "stop_sequences": ["Human: ", "Assistant: "],
 }
 
@@ -20,5 +20,5 @@ EMBEDDING_CONFIG = {
 
 # Configure search parameter to fetch relevant documents from vector store.
 SEARCH_CONFIG = {
-    "max_results": 50,
+    "max_results": 5,
 }

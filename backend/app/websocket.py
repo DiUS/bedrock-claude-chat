@@ -31,6 +31,123 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+def get_rag_query(conversation, user_msg_id, chat_input):
+    """Get query for RAG model."""
+    query = ""
+
+    model_id = chat_input.message.model
+
+    messages = trace_to_root(
+        node_id=chat_input.message.parent_message_id,
+        message_map=conversation.message_map,
+    )
+
+    formatted_conversation = ""
+    for message in messages:
+        if message.role == "user":
+            formatted_conversation += f"User: {message.content[-1].body}\n\n"
+        if message.role == "assistant":
+            formatted_conversation += f"Assistant: {message.content[-1].body}\n\n"
+    formatted_conversation += f"User: {chat_input.message.content[-1].body}\n\n"
+
+    # Ask the model what product are we taling about
+    no_product_response = "<NO_PRODUCT>"
+    template = """
+        Based on the following conversation:
+        {}
+
+        What is the relevant information to give to the search engine?
+        """.format(formatted_conversation)
+
+    print(f"Formatted conversation: {formatted_conversation}")
+    print(f"Model id: {model_id}")
+    print(f"Template: {template}")
+
+    # Invoke Bedrock
+    args = compose_args_for_anthropic_client(
+        [
+            MessageModel(
+                role="user",
+                content=[ContentModel(content_type="text", body=template, media_type=None)],
+                model=model_id,
+                children=[],
+                parent=None,
+                create_time=get_current_time(),
+            ),
+        ],
+        model_id,
+        instruction= """
+        You are extracting relevant information from the conversation to give to the search engine.
+        If there are multiple products, provide the name of the product that is mentioned last.
+        If there is no specific product, give as much details about what the user is looking for.
+
+        Format answer as: "<product_name>" or "<product_details>".
+
+        <examples>
+            <example>
+                <input>
+                    User: Id like to buy in iphone.
+                    Assistant: Sure, which model are you interested in?
+                    User: I am interested in iPhone 13.
+                </input>
+                <output>
+                    "iPhone 13"
+                </output>
+            </example>
+            <example>
+                <input>
+                    User: I am interested in a tshirt.
+                    Assistant: Okay, I'd be happy to help you find a t-shirt! To narrow down the options, could you provide some more details? What style of t-shirt are you looking for - casual, athletic, graphic print? Do you have a preferred fit like slim, relaxed, or loose? And what size would you need? Any particular colors or designs you're interested in? The more specifics you can give me, the better I can suggest some relevant options from the available products
+                    User: casual, black, vneck, slim, L.
+                </input>
+                <output>
+                    "Black casual vneck large tshirt"
+                </output>
+            </example>
+            <example>
+                <input>
+                    User: I am interested in a tshirt.
+                    Assistant: Sure, which color are you interested in?
+                    User: black.
+                    Assistant: Here are 3 options
+                    1. Adidas black tshirt XL
+                    2. Nike black tshirt L
+                    3. Puma black tshirt M
+                    User: I am interested in the first one.
+                </input>
+                <output>
+                    "Adidas black tshirt XL"
+                </output>
+        </examples>
+        """.format(no_product_response),
+        stream=False,
+    )
+    print(f"Invoking bedrock with args: {args}")
+    try:
+        # Invoke bedrock api
+        response = client.messages.create(**args)
+        print(f"Response from bedrock: {response}")
+        if (
+            response.content[0].type == "text" and
+            no_product_response in response.content[0].text
+        ):
+            # Use the last user message as the query
+            query = conversation.message_map[user_msg_id].content[-1].body
+        else:
+            # Use the product name returned by the LLM
+            query = response.content[0].text
+        return query
+    except Exception as e:
+        print(f"Failed to invoke bedrock: {e}")
+        # Use the last user message as the query
+        return (
+            conversation
+            .message_map[user_msg_id]
+            .content[-1]
+            .body.strip('>').strip('<')
+        )
+
+
 def process_chat_input(
     chat_input: ChatInputWithToken, gatewayapi, connection_id: str
 ) -> dict:
@@ -80,7 +197,13 @@ def process_chat_input(
         )
         # Fetch most related documents from vector store
         # NOTE: Currently embedding not support multi-modal. For now, use the last text content.
-        query = conversation.message_map[user_msg_id].content[-1].body
+        # query = conversation.message_map[user_msg_id].content[-1].body
+        query = get_rag_query(
+            conversation,
+            user_msg_id,
+            chat_input
+        )
+        print(f"Query for RAG model: {query}")
         results = search_related_docs(
             bot_id=bot.id, limit=SEARCH_CONFIG["max_results"], query=query
         )

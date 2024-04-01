@@ -3,8 +3,8 @@ import json
 import logging
 import os
 
-import boto3
 import pg8000
+import pg8000.native
 import requests
 from app.config import EMBEDDING_CONFIG
 from app.repositories.common import _get_table_client
@@ -45,11 +45,8 @@ def get_exec_id() -> str:
     return task_id
 
 
-def insert_to_postgres(
+def clear_postgres(
     bot_id: str,
-    contents: list[str],
-    sources: list[str],
-    embeddings: list[list[float]],
     expired_sources: list[str] = [],
     clear_all: bool = False,
 ):
@@ -67,20 +64,43 @@ def insert_to_postgres(
                 delete_query = "DELETE FROM items WHERE botid = %s"
                 cursor.execute(delete_query, (bot_id,))
             elif len(expired_sources) > 0:
-                delete_query = "DELETE FROM items WHERE botid = :1 AND source IN (SELECT UNNEST(CAST(:2 AS TEXT[])))"
+                delete_query = "DELETE FROM items WHERE botid = %s AND source IN (SELECT UNNEST(CAST(%s AS TEXT[])))"
                 expired_source_array = list(set(expired_sources))
                 print(f"Expired sources: {expired_source_array}")
                 cursor.execute(delete_query, (bot_id, expired_source_array))
             else:
                 print("No expired sources to delete.")
+        conn.commit()
+        print(f"Sucessfully removed {'all' if clear_all else len(expired_sources) } sources.")
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
 
-            insert_query = f"INSERT INTO items (id, botid, content, source, embedding) VALUES (%s, %s, %s, %s, %s)"
+
+def insert_to_postgres(
+    bot_id: str,
+    contents: list[str],
+    sources: list[str],
+    embeddings: list[list[float]],
+):
+    conn = pg8000.connect(
+        database=DB_NAME,
+        host=DB_HOST,
+        port=DB_PORT,
+        user=DB_USER,
+        password=DB_PASSWORD,
+    )
+
+    try:
+        with conn.cursor() as cursor:
+            insert_query = "INSERT INTO items (id, botid, content, source, embedding) VALUES (%s, %s, %s, %s, %s)"
             values_to_insert = []
             for i, (source, content, embedding) in enumerate(
                 zip(sources, contents, embeddings)
             ):
                 id_ = str(ULID())
-                print(f"Preview of content {i}: {content[:200]}")
                 values_to_insert.append(
                     (id_, bot_id, content, source, json.dumps(embedding))
                 )
@@ -88,7 +108,6 @@ def insert_to_postgres(
                 cursor.executemany(insert_query, values_to_insert)
         conn.commit()
         print(f"Successfully inserted {len(values_to_insert)} records.")
-        print(f"Sucessfully removed {'all' if clear_all else len(expired_sources) } sources.")
     except Exception as e:
         conn.rollback()
         raise e
@@ -115,11 +134,44 @@ def update_sync_status(
     )
 
 
+def update_index():
+    conn = pg8000.native.Connection(
+        database=DB_NAME,
+        host=DB_HOST,
+        port=DB_PORT,
+        user=DB_USER,
+        password=DB_PASSWORD,
+    )
+
+    try:
+        # # Recreate the index
+        # dropIndexquery = "DROP INDEX IF EXISTS idx_items_embedding;"
+
+        # # `lists` parameter controls the nubmer of clusters created during index building.
+        # # Also it's important to choose the same index method as the one used in the query.
+        # # Here we use L2 distance for the index method.
+        # # See: https://txt.cohere.com/introducing-embed-v3/
+
+        # # As we will have dataset with more than one million items, the number of list should be sqrt(~rows) (see blog above)
+        # indexQuery = "CREATE INDEX idx_items_embedding ON items USING ivfflat (embedding vector_l2_ops) WITH (lists = 1100);"
+
+        # print("Dropping the index...")
+        # conn.run(dropIndexquery)
+        # print("Creating the index...")
+        # conn.run(indexQuery)
+
+        print("Updating the index...")
+        reindex_query = "REINDEX INDEX CONCURRENTLY idx_items_embedding;"
+        conn.run(reindex_query)
+        print("Successfully updated the index.")
+    except Exception as e:
+        raise e
+    finally:
+        conn.close()
+
+
 def embed(
     loader: BaseLoader,
-    contents: list[str],
-    sources: list[str],
-    embeddings: list[list[float]],
 ):
     splitter = DocumentSplitter(
         splitter=SentenceSplitter(
@@ -133,12 +185,27 @@ def embed(
     embedder = Embedder(verbose=True)
 
     documents = loader.load()
-    splitted = splitter.split_documents(documents)
-    splitted_embeddings = embedder.embed_documents(splitted)
+    while documents is not None and len(documents) > 0:
+        contents = []
+        sources = []
+        embeddings = []
+        splitted = splitter.split_documents(documents)
+        splitted_embeddings = embedder.embed_documents(splitted)
 
-    contents.extend([t.page_content for t in splitted])
-    sources.extend([t.metadata["source"] for t in splitted])
-    embeddings.extend(splitted_embeddings)
+        contents.extend([t.page_content for t in splitted])
+        sources.extend([t.metadata["source"] for t in splitted])
+        embeddings.extend(splitted_embeddings)
+
+        # Insert records into postgres
+        print(f"Number of chunks: {len(contents)}")
+
+        insert_to_postgres(
+            bot_id,
+            contents,
+            sources,
+            embeddings,
+        )
+        documents = loader.load()
 
 
 def main(
@@ -169,37 +236,6 @@ def main(
 
     status_reason = ""
     try:
-        # Calculate embeddings using LangChain
-        contents = []
-        sources = []
-        embeddings = []
-
-        if len(sitemap_urls) + len(source_urls) + len(filenames) > 0:
-            if len(source_urls) > 0:
-                embed(UrlLoader(source_urls), contents, sources, embeddings)
-            if len(sitemap_urls) > 0:
-                for sitemap_url in sitemap_urls:
-                    raise NotImplementedError()
-            if len(filenames) > 0:
-                for filename in filenames:
-                    embed(
-                        S3FileLoader(
-                            bucket=DOCUMENT_BUCKET,
-                            key=compose_upload_document_s3_path(
-                                user_id,
-                                bot_id,
-                                filename
-                            ),
-                        ),
-                        contents,
-                        sources,
-                        embeddings,
-                    )
-
-            print(f"Number of chunks: {len(contents)}")
-
-        # Insert records into postgres
-
         # Get expired sources
         # TODO: Add sitemap_urls when supported
         expired_sources = []
@@ -221,14 +257,42 @@ def main(
                     ).get_sources()
                 )
 
-        insert_to_postgres(
+        clear_postgres(
             bot_id,
-            contents,
-            sources,
-            embeddings,
             expired_sources,
             clear_all
         )
+
+        # Calculate embeddings using LangChain
+        if len(sitemap_urls) + len(source_urls) + len(filenames) > 0:
+            failures = 0
+            if len(source_urls) > 0:
+                embed(UrlLoader(source_urls))
+            if len(sitemap_urls) > 0:
+                for sitemap_url in sitemap_urls:
+                    raise NotImplementedError()
+            if len(filenames) > 0:
+                for filename in filenames:
+                    try:
+                        embed(
+                            S3FileLoader(
+                                bucket=DOCUMENT_BUCKET,
+                                key=compose_upload_document_s3_path(
+                                    user_id,
+                                    bot_id,
+                                    filename
+                                ),
+                            ),
+                        )
+                    except Exception as e:
+                        print(f"[ERROR] Failed to embed {filename}: {e}")
+                        failures += 1
+
+            if failures > len(filenames) * 0.2:
+                raise Exception("Too many failures.")
+
+            update_index()
+
         status_reason = "Successfully updated vector store."
     except Exception as e:
         print("[ERROR] Failed to embed.")
@@ -282,7 +346,7 @@ if __name__ == "__main__":
     if (old_image is not None):
         # If old image sync status is failed, re-embbed all contents
         old_sync_status = old_image["SyncStatus"]["S"]
-        if old_sync_status == "FAILED":
+        if old_sync_status == "FAILED" or os.environ.get("CLEAR_ALL", "false") == "true":
             clear_all = True
             print("old_sync_status is FAILED. Clearing all contents.")
         else:
