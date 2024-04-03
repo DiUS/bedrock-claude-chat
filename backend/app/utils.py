@@ -21,7 +21,7 @@ def get_bedrock_client(region=BEDROCK_REGION):
 
 
 def get_anthropic_client(region=BEDROCK_REGION):
-    client = AnthropicBedrock(aws_region=region)
+    client = AnthropicBedrock(aws_region=region, max_retries=5)
 
     return client
 

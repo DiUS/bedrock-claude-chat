@@ -57,7 +57,7 @@ LIMIT %s;
 """
             # Using 33 probes as this is the recommended value (sqrt of the number of lists in the index)
             # See: https://www.timescale.com/blog/nearest-neighbor-indexes-what-are-ivfflat-indexes-in-pgvector-and-how-do-they-work/
-            cursor.execute("""SET ivfflat.probes = 33;""")
+            cursor.execute("""SET ivfflat.probes = 5;""")
             cursor.execute(search_query, (bot_id, json.dumps(query_embedding), limit))
             results = cursor.fetchall()
     except Exception as e:

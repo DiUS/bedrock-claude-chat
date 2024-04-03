@@ -35,7 +35,8 @@ def get_rag_query(conversation, user_msg_id, chat_input):
     """Get query for RAG model."""
     query = ""
 
-    model_id = chat_input.message.model
+    # model_id = "claude-v2.1"
+    model_id = "claude-v3-sonnet"
 
     messages = trace_to_root(
         node_id=chat_input.message.parent_message_id,
@@ -220,6 +221,7 @@ def process_chat_input(
     messages.append(chat_input.message)  # type: ignore
 
     # Invoke Bedrock
+    logger.info(f"Composing args for bedrock client.")
     args = compose_args_for_anthropic_client(
         messages,
         chat_input.message.model,
@@ -233,11 +235,13 @@ def process_chat_input(
     # logger.debug(f"Invoking bedrock with args: {args}")
     try:
         # Invoke bedrock streaming api
+        logger.info("Invoking bedrock")
         response = client.messages.create(**args)
     except Exception as e:
-        print(f"Failed to invoke bedrock: {e}")
+        logger.error(f"Failed to invoke bedrock: {e}")
         return {"statusCode": 500, "body": "Failed to invoke bedrock."}
 
+    logger.info(f"Bedrock response: {response}")
     completions = []
     last_data_to_send = {}
     for event in response:

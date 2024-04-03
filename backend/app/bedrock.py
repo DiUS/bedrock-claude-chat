@@ -57,10 +57,14 @@ def get_model_id(model: str) -> str:
     # Ref: https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids-arns.html
     if model == "claude-v2":
         return "anthropic.claude-v2"
+    elif model == "claude-v2.1":
+        return "anthropic.claude-v2:1"
     elif model == "claude-instant-v1":
         return "anthropic.claude-instant-v1"
     elif model == "claude-v3-sonnet":
         return "anthropic.claude-3-sonnet-20240229-v1:0"
+    elif model == "claude-v3-haiku":
+        return "anthropic.claude-3-haiku-20240307-v1:0"
     else:
         raise NotImplementedError()
 
