@@ -22,3 +22,8 @@ EMBEDDING_CONFIG = {
 SEARCH_CONFIG = {
     "max_results": 5,
 }
+
+# Configure bedrock client.
+BEDROCK_CONFIG = {
+    "max_retries": 5,
+}

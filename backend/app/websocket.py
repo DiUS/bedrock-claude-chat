@@ -1,14 +1,15 @@
 import json
 import logging
 import os
+import time
 from datetime import datetime
 from decimal import Decimal as decimal
 
 import boto3
-from anthropic.types import ContentBlockDeltaEvent, MessageDeltaEvent, MessageStopEvent
+from anthropic.types import ContentBlockDeltaEvent, MessageDeltaEvent, MessageStopEvent, Message
 from app.auth import verify_token
-from app.bedrock import compose_args_for_anthropic_client, get_model_id
-from app.config import GENERATION_CONFIG, SEARCH_CONFIG
+from app.bedrock import compose_args_for_anthropic_client
+from app.config import SEARCH_CONFIG, BEDROCK_CONFIG
 from app.repositories.conversation import RecordNotFoundError, store_conversation
 from app.repositories.model import ContentModel, MessageModel
 from app.route_schema import ChatInputWithToken
@@ -17,7 +18,6 @@ from app.usecases.chat import insert_knowledge, prepare_conversation, trace_to_r
 from app.utils import get_anthropic_client, get_current_time
 from app.vector_search import SearchResult, search_related_docs
 from boto3.dynamodb.conditions import Key
-from botocore.exceptions import ClientError
 from ulid import ULID
 
 WEBSOCKET_SESSION_TABLE_NAME = os.environ["WEBSOCKET_SESSION_TABLE_NAME"]
@@ -126,7 +126,7 @@ def get_rag_query(conversation, user_msg_id, chat_input):
     print(f"Invoking bedrock with args: {args}")
     try:
         # Invoke bedrock api
-        response = client.messages.create(**args)
+        response = invoke_bedrock_with_retries(args)
         print(f"Response from bedrock: {response}")
         if (
             response.content[0].type == "text" and
@@ -147,6 +147,33 @@ def get_rag_query(conversation, user_msg_id, chat_input):
             .content[-1]
             .body.strip('>').strip('<')
         )
+
+
+def invoke_bedrock_with_retries(args, try_count=1):
+    # Return type changes based on streaming or not
+    if "stream" in args and args["stream"] is True:
+        response = client.messages.create(**args)
+        if try_count > BEDROCK_CONFIG["max_retries"]:
+            return response
+        httpResponse = response.response
+        if httpResponse.status_code != 200:
+            logger.error(f"Failed to invoke bedrock: {httpResponse.status_code} - headers: {httpResponse.headers}")
+            if httpResponse.headers.get(":exception-type") == "throttlingException":
+                time.sleep(try_count * 5)
+                return invoke_bedrock_with_retries(args, try_count=try_count + 1)
+        return response
+    else:
+        try:
+            response = client.messages.create(**args)
+        except Exception as e:
+            logger.error(f"Failed to invoke bedrock: {e}")
+            if try_count > BEDROCK_CONFIG["max_retries"]:
+                raise e
+            if "throttling" in str(e):
+                time.sleep(try_count * 5)
+                return invoke_bedrock_with_retries(args, try_count=try_count + 1)
+            raise e
+        return response
 
 
 def process_chat_input(
@@ -236,7 +263,7 @@ def process_chat_input(
     try:
         # Invoke bedrock streaming api
         logger.info("Invoking bedrock")
-        response = client.messages.create(**args)
+        response = invoke_bedrock_with_retries(args)
     except Exception as e:
         logger.error(f"Failed to invoke bedrock: {e}")
         return {"statusCode": 500, "body": "Failed to invoke bedrock."}
@@ -244,6 +271,7 @@ def process_chat_input(
     logger.info(f"Bedrock response: {response}")
     completions = []
     last_data_to_send = {}
+
     for event in response:
         # NOTE: following is the example of event sequence:
         # MessageStartEvent(message=Message(id='compl_01GwmkwncsptaeBopeaR4eWE', content=[], model='claude-instant-1.2', role='assistant', stop_reason=None, stop_sequence=None, type='message', usage=Usage(input_tokens=21, output_tokens=1)), type='message_start')
