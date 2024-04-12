@@ -22,7 +22,7 @@ class TestUtils(unittest.TestCase):
         LOGGER.debug("Region: ")
         LOGGER.debug(reg)
 
-        assert reg == "us-east-1"
+        assert reg == "ap-southeast-2"
 
     def test_get_bedrock_client_alt(self):
         from app.utils import get_bedrock_client

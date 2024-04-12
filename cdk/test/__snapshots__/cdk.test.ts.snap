@@ -507,12 +507,12 @@ exports[`SnapshotTest 1`] = `
         },
         "Environment": {
           "Variables": {
-            "BEDROCK_REGION": "us-east-1",
+            "BEDROCK_REGION": "ap-southeast-2",
             "CLIENT_ID": {
               "Ref": "AuthUserPoolClientC635291F",
             },
             "CORS_ALLOW_ORIGINS": "*",
-            "ENDPOINT_URL": "https://bedrock.us-east-1.amazonaws.com",
+            "ENDPOINT_URL": "https://bedrock.ap-southeast-2.amazonaws.com",
             "REGION": {
               "Ref": "AWS::Region",
             },

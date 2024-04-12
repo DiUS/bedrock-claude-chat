@@ -23,7 +23,7 @@ export class FrontendWafStack extends Stack {
     // create Ipset for ACL
     const ipV4SetReferenceStatement = new wafv2.CfnIPSet(
       this,
-      "FrontendIpV4Set",
+      "FrontendIpV4Set-Sydney",
       {
         ipAddressVersion: "IPV4",
         scope: "CLOUDFRONT",
@@ -32,7 +32,7 @@ export class FrontendWafStack extends Stack {
     );
     const ipV6SetReferenceStatement = new wafv2.CfnIPSet(
       this,
-      "FrontendIpV6Set",
+      "FrontendIpV6Set-Sydney",
       {
         ipAddressVersion: "IPV6",
         scope: "CLOUDFRONT",
@@ -42,7 +42,7 @@ export class FrontendWafStack extends Stack {
 
     const webAcl = new wafv2.CfnWebACL(this, "WebAcl", {
       defaultAction: { block: {} },
-      name: "FrontendWebAcl",
+      name: "FrontendWebAcl-Sydney",
       scope: "CLOUDFRONT",
       visibilityConfig: {
         cloudWatchMetricsEnabled: true,
@@ -79,7 +79,7 @@ export class FrontendWafStack extends Stack {
       ],
     });
 
-    this.webAclArn = new cdk.CfnOutput(this, "WebAclId", {
+    this.webAclArn = new cdk.CfnOutput(this, "WebAclId-Sydney", {
       value: webAcl.attrArn,
     });
   }

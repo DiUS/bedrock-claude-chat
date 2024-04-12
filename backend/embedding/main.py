@@ -20,7 +20,7 @@ from ulid import ULID
 
 logging.basicConfig(level=logging.INFO)
 
-BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
+BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "ap-southeast-2")
 MODEL_ID = EMBEDDING_CONFIG["model_id"]
 CHUNK_SIZE = EMBEDDING_CONFIG["chunk_size"]
 CHUNK_OVERLAP = EMBEDDING_CONFIG["chunk_overlap"]

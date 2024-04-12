@@ -20,7 +20,7 @@ const ENABLE_USAGE_ANALYSIS: boolean = app.node.tryGetContext(
 // WAF for frontend
 // 2023/9: Currently, the WAF for CloudFront needs to be created in the North America region (us-east-1), so the stacks are separated
 // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-wafv2-webacl.html
-const waf = new FrontendWafStack(app, `FrontendWafStack`, {
+const waf = new FrontendWafStack(app, `FrontendWafStack-Sydney`, {
   env: {
     region: "us-east-1",
   },
@@ -30,7 +30,7 @@ const waf = new FrontendWafStack(app, `FrontendWafStack`, {
 
 new BedrockChatStack(app, `BedrockChatStack`, {
   env: {
-    region: process.env.CDK_DEFAULT_REGION,
+    region: "ap-southeast-2",
   },
   crossRegionReferences: true,
   bedrockRegion: BEDROCK_REGION,

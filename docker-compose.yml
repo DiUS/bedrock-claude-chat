@@ -8,9 +8,9 @@ services:
       - 5173:5173
     environment:
       VITE_APP_API_ENDPOINT: http://localhost:8000
-      VITE_APP_USER_POOL_ID: us-east-1_XXXXXXXXX
+      VITE_APP_USER_POOL_ID: ap-southeast-2_XXXXXXXXX
       VITE_APP_USER_POOL_CLIENT_ID: replace_with_your_client_id
-      VITE_APP_REGION: us-east-1
+      VITE_APP_REGION: ap-southeast-2
       VITE_APP_USE_STREAMING: false # ローカル開発時は websocket を利用しない
     volumes:
       - "./frontend/src:/app/src"
@@ -26,7 +26,7 @@ services:
       DDB_ENDPOINT_URL: http://dynamodb-local:8080
       TABLE_NAME: ConversationTable
       # Bedrock 向けの設定
-      BEDROCK_REGION: us-east-1
+      BEDROCK_REGION: ap-southeast-2
       #AWS_ACCESS_KEY_ID: XXXX
       #AWS_SECRET_ACCESS_KEY: XXXX
     volumes:
@@ -45,7 +45,7 @@ services:
   init-dynamodb:
     image: public.ecr.aws/aws-cli/aws-cli:latest
     environment:
-      AWS_REGION: us-east-1
+      AWS_REGION: ap-southeast-2
       AWS_ACCESS_KEY_ID: key
       AWS_SECRET_ACCESS_KEY: key
     depends_on:
@@ -71,7 +71,7 @@ services:
   #  depends_on:
   #    - dynamodb-local
   #  environment:
-  #    AWS_REGION: us-east-1
+  #    AWS_REGION: ap-southeast-2
   #    AWS_ACCESS_KEY_ID: key
   #    AWS_SECRET_ACCESS_KEY: key
   #    DYNAMO_ENDPOINT: http://dynamodb-local:8080
