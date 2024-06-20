@@ -3,6 +3,7 @@ import os
 import traceback
 from typing import Callable
 
+from langtrace_python_sdk import langtrace # Must precede any llm module imports
 from app.auth import verify_token
 from app.repositories.common import RecordAccessNotAllowedError, RecordNotFoundError
 from app.route import router
@@ -17,6 +18,9 @@ from jose import JWTError
 from pydantic import ValidationError
 from starlette.routing import Match
 from starlette.types import ASGIApp, Message
+
+
+langtrace.init(api_key='2ae7c65e48fcfda72f63bcc0cab46b7ef61fca6cc2dd8dc678e28348189c9f2c')
 
 CORS_ALLOW_ORIGINS = os.environ.get("CORS_ALLOW_ORIGINS", "*")
 
