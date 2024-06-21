@@ -160,14 +160,14 @@ def invoke_bedrock_with_retries(args, try_count=1):
     # Return type changes based on streaming or not
     if "stream" in args and args["stream"] is True:
         response = client.messages.create(**args)
-        if try_count > BEDROCK_CONFIG["max_retries"]:
-            return response
-        httpResponse = response.response
-        if httpResponse.status_code != 200:
-            logger.error(f"Failed to invoke bedrock: {httpResponse.status_code} - headers: {httpResponse.headers}")
-            if httpResponse.headers.get(":exception-type") == "throttlingException":
-                time.sleep(try_count * 5)
-                return invoke_bedrock_with_retries(args, try_count=try_count + 1)
+        # if try_count > BEDROCK_CONFIG["max_retries"]:
+        #     return response
+        # httpResponse = response.response
+        # if httpResponse.status_code != 200:
+        #     logger.error(f"Failed to invoke bedrock: {httpResponse.status_code} - headers: {httpResponse.headers}")
+        #     if httpResponse.headers.get(":exception-type") == "throttlingException":
+        #         time.sleep(try_count * 5)
+        #         return invoke_bedrock_with_retries(args, try_count=try_count + 1)
         return response
     else:
         try:
