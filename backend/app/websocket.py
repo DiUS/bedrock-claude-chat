@@ -269,7 +269,7 @@ def process_chat_input(
     # logger.debug(f"Invoking bedrock with args: {args}")
     try:
         # Invoke bedrock streaming api
-        logger.info("Invoking bedrock")
+        logger.info(f"Invoking bedrock with args: {args}")
         response = invoke_bedrock_with_retries(args)
     except Exception as e:
         logger.error(f"Failed to invoke bedrock: {e}")
