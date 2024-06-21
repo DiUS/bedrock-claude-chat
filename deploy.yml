@@ -107,7 +107,7 @@ Resources:
                   "git clone https://github.com/DiUS/bedrock-claude-chat.git",
                   "cd bedrock-claude-chat",
                   "git checkout origin/feature/kin-explore",
-                  "cd bedrock-claude-chat/cdk",
+                  "cd cdk",
                   "npm ci",
                   "cdk bootstrap",
                   "cdk deploy --require-approval never --all"
