@@ -45,6 +45,36 @@ Add your own instruction and give external knowledge as URL or files (a.k.a [RAG
 </details>
 
 - Open [CloudShell](https://console.aws.amazon.com/cloudshell/home) at the region where you want to deploy
+- Before Deploying, ensure the `deploy.xml` file is pointing to the correct branch. Specifically, change this:
+```xml
+      Source:
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "install": {
+                "runtime-versions": {
+                  "nodejs": "18"
+                },
+                "commands": [
+                  "npm i -g aws-cdk"
+                ],
+                "on-failure": "ABORT"
+              },
+              "build": {
+                "commands": [
+                  "git clone https://github.com/DiUS/bedrock-claude-chat.git",
+                  "cd bedrock-claude-chat",
+                  "git checkout <BRANCH-HERE>>",
+                  "cd cdk",
+                  "npm ci",
+                  "cdk bootstrap",
+                  "cdk deploy --require-approval never --all"
+                ]
+              }
+            }
+          }
+```
 - Run deployment via following commands
 
 ```sh
