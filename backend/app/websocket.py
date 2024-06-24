@@ -337,9 +337,9 @@ def process_chat_input(
             # Append children to parent
             conversation.message_map[user_msg_id].children.append(assistant_msg_id)
             conversation.last_message_id = assistant_msg_id
-            conversation.title = propose_conversation_title(user_id=user_id,conversation_id=chat_input.conversation_id,model="claude-v3-sonnet")
 
             store_conversation(user_id, conversation)
+            conversation.title = propose_conversation_title(user_id=user_id,conversation_id=chat_input.conversation_id,model="claude-v3-sonnet")
 
             # TODO: implement cost calculation
             metrics = event.model_dump()["amazon-bedrock-invocationMetrics"]
