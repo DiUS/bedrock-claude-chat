@@ -20,13 +20,13 @@ from app.vector_search import SearchResult, search_related_docs
 from boto3.dynamodb.conditions import Key
 from ulid import ULID
 
-from traceloop.sdk import Traceloop
-from traceloop.sdk.decorators import workflow
+# from traceloop.sdk import Traceloop
+# from traceloop.sdk.decorators import workflow
 
-Traceloop.init(
-  disable_batch=True, 
-  api_key="3fe8c30cc5591f35d40a62e205c5ce862a96e04c17269b383dfe2ae25087deb745bff9d63a3de030275d1e29ff28ed6e"
-)
+# Traceloop.init(
+#   disable_batch=True, 
+#   api_key="3fe8c30cc5591f35d40a62e205c5ce862a96e04c17269b383dfe2ae25087deb745bff9d63a3de030275d1e29ff28ed6e"
+# )
 
 WEBSOCKET_SESSION_TABLE_NAME = os.environ["WEBSOCKET_SESSION_TABLE_NAME"]
 
@@ -155,7 +155,7 @@ def get_rag_query(conversation, user_msg_id, chat_input):
             .body.strip('>').strip('<')
         )
 
-@workflow(name='invoke_bedrock')
+# @workflow(name='invoke_bedrock')
 def invoke_bedrock_with_retries(args, try_count=1):
     # Return type changes based on streaming or not
     if "stream" in args and args["stream"] is True:
