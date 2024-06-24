@@ -14,7 +14,7 @@ from app.repositories.conversation import RecordNotFoundError, store_conversatio
 from app.repositories.model import ContentModel, MessageModel
 from app.route_schema import ChatInputWithToken
 from app.usecases.bot import modify_bot_last_used_time
-from app.usecases.chat import insert_knowledge, prepare_conversation, trace_to_root
+from app.usecases.chat import insert_knowledge, prepare_conversation, trace_to_root, propose_conversation_title
 from app.utils import get_anthropic_client, get_current_time
 from app.vector_search import SearchResult, search_related_docs
 from boto3.dynamodb.conditions import Key
@@ -337,6 +337,7 @@ def process_chat_input(
             # Append children to parent
             conversation.message_map[user_msg_id].children.append(assistant_msg_id)
             conversation.last_message_id = assistant_msg_id
+            conversation.title = propose_conversation_title(user_id=user_id,conversation_id=chat_input.conversation_id,model="claude-v3-sonnet")
 
             store_conversation(user_id, conversation)
 
