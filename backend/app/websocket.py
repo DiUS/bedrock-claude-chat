@@ -21,7 +21,7 @@ from boto3.dynamodb.conditions import Key
 from ulid import ULID
 
 from traceloop.sdk import Traceloop
-from traceloop.sdk.decorators import workflows
+from traceloop.sdk.decorators import workflow
 
 Traceloop.init(
   disable_batch=True, 
