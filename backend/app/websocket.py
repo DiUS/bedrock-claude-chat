@@ -35,7 +35,6 @@ def get_rag_query(conversation, user_msg_id, chat_input):
     """Get query for RAG model."""
     query = ""
 
-    # model_id = "claude-v2.1"
     model_id = "claude-v3-sonnet"
 
     messages = trace_to_root(
@@ -58,7 +57,8 @@ def get_rag_query(conversation, user_msg_id, chat_input):
         {}
 
         What is the relevant information to give to the search engine?
-        Format answer as: "<product_name>" or "<product_details>".
+
+        Here are a few examples of how you can respond:
         <examples>
             <example>
                 <input>
@@ -95,6 +95,8 @@ def get_rag_query(conversation, user_msg_id, chat_input):
                     "Adidas black tshirt XL"
                 </output>
         </examples>
+
+        Format your answer as a single line of text. If there are multiple products, provide the name of the product that is mentioned last. If there is no specific product, give as much details about what the user is looking for.
         """.format(formatted_conversation)
 
     logger.debug(f"Formatted conversation: {formatted_conversation}")
@@ -114,11 +116,9 @@ def get_rag_query(conversation, user_msg_id, chat_input):
             ),
         ],
         model_id,
-        instruction= """
-        You are extracting relevant information from the conversation to give to the search engine.
-        If there are multiple products, provide the name of the product that is mentioned last.
-        If there is no specific product, give as much details about what the user is looking for.
-        """.format(no_product_response),
+        instruction="""
+            You are an helpful assistant that is trying to understand what product the user is talking about.
+        """,
         stream=False,
     )
     logger.debug(f"Invoking bedrock with args: {args}")
