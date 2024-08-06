@@ -10,7 +10,6 @@ from botocore.exceptions import ClientError
 
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "ap-southeast-2")
 
-
 def is_running_on_lambda():
     return "AWS_EXECUTION_ENV" in os.environ
 
@@ -32,7 +31,14 @@ def get_current_time():
 
 
 def generate_presigned_url(bucket: str, key: str, content_type: str, expiration=3600):
-    client = boto3.client("s3", config=Config(signature_version="s3v4"))
+    client = boto3.client(
+        "s3",
+        config=Config(
+            signature_version="s3v4",
+            region_name="ap-southeast-2"
+        ),
+        endpoint_url="https://s3.ap-southeast-2.amazonaws.com"
+    )
     response = client.generate_presigned_url(
         "put_object",
         Params={"Bucket": bucket, "Key": key, "ContentType": content_type},
