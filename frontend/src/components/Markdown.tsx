@@ -19,7 +19,12 @@ const Markdown: React.FC<Props> = ({ className, children }) => {
       remarkPlugins={[remarkGfm, remarkBreaks]}
       components={{
         a({ children, href }) {
-          if (href?.endsWith('.jpg') || href?.endsWith('.png') || href?.endsWith('.gif')) {
+          // if (href?.endsWith('.jpg') || href?.endsWith('.png') || href?.endsWith('.gif')) {
+          //   return <img src={href} alt={String(children)} />;
+          // }
+          const imageRegex = /\.(jpg|jpeg|png|gif)$/i;
+          console.log('Checking href:', href);
+          if (href && imageRegex.test(href)) {
             return <img src={href} alt={String(children)} />;
           }
           return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
