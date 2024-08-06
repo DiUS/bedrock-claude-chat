@@ -58,32 +58,7 @@ def get_rag_query(conversation, user_msg_id, chat_input):
         {}
 
         What is the relevant information to give to the search engine?
-        """.format(formatted_conversation)
-
-    print(f"Formatted conversation: {formatted_conversation}")
-    print(f"Model id: {model_id}")
-    print(f"Template: {template}")
-
-    # Invoke Bedrock
-    args = compose_args_for_anthropic_client(
-        [
-            MessageModel(
-                role="user",
-                content=[ContentModel(content_type="text", body=template, media_type=None)],
-                model=model_id,
-                children=[],
-                parent=None,
-                create_time=get_current_time(),
-            ),
-        ],
-        model_id,
-        instruction= """
-        You are extracting relevant information from the conversation to give to the search engine.
-        If there are multiple products, provide the name of the product that is mentioned last.
-        If there is no specific product, give as much details about what the user is looking for.
-
         Format answer as: "<product_name>" or "<product_details>".
-
         <examples>
             <example>
                 <input>
@@ -120,14 +95,37 @@ def get_rag_query(conversation, user_msg_id, chat_input):
                     "Adidas black tshirt XL"
                 </output>
         </examples>
+        """.format(formatted_conversation)
+
+    logger.debug(f"Formatted conversation: {formatted_conversation}")
+    logger.debug(f"Model id: {model_id}")
+    logger.debug(f"Template: {template}")
+
+    # Invoke Bedrock
+    args = compose_args_for_anthropic_client(
+        [
+            MessageModel(
+                role="user",
+                content=[ContentModel(content_type="text", body=template, media_type=None)],
+                model=model_id,
+                children=[],
+                parent=None,
+                create_time=get_current_time(),
+            ),
+        ],
+        model_id,
+        instruction= """
+        You are extracting relevant information from the conversation to give to the search engine.
+        If there are multiple products, provide the name of the product that is mentioned last.
+        If there is no specific product, give as much details about what the user is looking for.
         """.format(no_product_response),
         stream=False,
     )
-    print(f"Invoking bedrock with args: {args}")
+    logger.debug(f"Invoking bedrock with args: {args}")
     try:
         # Invoke bedrock api
         response = invoke_bedrock_with_retries(args)
-        print(f"Response from bedrock: {response}")
+        logger.debug(f"Response from bedrock: {response}")
         if (
             response.content[0].type == "text" and
             no_product_response in response.content[0].text
@@ -139,7 +137,7 @@ def get_rag_query(conversation, user_msg_id, chat_input):
             query = response.content[0].text
         return query
     except Exception as e:
-        print(f"Failed to invoke bedrock: {e}")
+        logger.error(f"Failed to invoke bedrock: {e}")
         # Use the last user message as the query
         return (
             conversation
@@ -186,7 +184,7 @@ def process_chat_input(
         # Verify JWT token
         decoded = verify_token(chat_input.token)
     except Exception as e:
-        print(f"Invalid token: {e}")
+        logger.error(f"Invalid token: {e}")
         return {"statusCode": 403, "body": "Invalid token."}
 
     user_id = decoded["sub"]
@@ -231,7 +229,7 @@ def process_chat_input(
             user_msg_id,
             chat_input
         )
-        print(f"Query for RAG model: {query}")
+        logger.debug(f"Query for RAG model: {query}")
         results = search_related_docs(
             bot_id=bot.id, limit=SEARCH_CONFIG["max_results"], query=query
         )
@@ -296,7 +294,7 @@ def process_chat_input(
                     ConnectionId=connection_id, Data=data_to_send
                 )
             except Exception as e:
-                print(f"Failed to post message: {str(e)}")
+                logger.error(f"Failed to post message: {str(e)}")
                 return {
                     "statusCode": 500,
                     "body": "Failed to send message to connection.",
@@ -349,7 +347,7 @@ def process_chat_input(
             ConnectionId=connection_id, Data=last_data_to_send
         )
     except Exception as e:
-        print(f"Failed to post message: {str(e)}")
+        logger.error(f"Failed to post message: {str(e)}")
         return {
             "statusCode": 500,
             "body": "Failed to send message to connection.",
@@ -364,7 +362,7 @@ def process_chat_input(
 
 
 def handler(event, context):
-    print(f"Received event: {event}")
+    logger.debug(f"Received event: {event}")
     route_key = event["requestContext"]["routeKey"]
 
     if route_key == "$connect":
