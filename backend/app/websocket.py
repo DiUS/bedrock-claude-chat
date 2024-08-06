@@ -96,7 +96,8 @@ def get_rag_query(conversation, user_msg_id, chat_input):
                 </output>
         </examples>
 
-        Format your answer as a single line of text. If there are multiple products, provide the name of the product that is mentioned last. If there is no specific product, give as much details about what the user is looking for.
+        If there are multiple products, provide all their names. If there is no specific product, give as much details about what the user is looking for.
+        Format your answer as a single line of text.
         """.format(formatted_conversation)
 
     logger.debug(f"Formatted conversation: {formatted_conversation}")
