@@ -56,7 +56,7 @@ def get_rag_query(conversation, user_msg_id, chat_input):
         Based on the following conversation:
         {}
 
-        What is the relevant information to give to the search engine?
+        What is the relevant information to give to the vector search engine?
 
         Here are a few examples of how you can respond:
         <examples>
@@ -82,21 +82,30 @@ def get_rag_query(conversation, user_msg_id, chat_input):
             </example>
             <example>
                 <input>
-                    User: I am interested in a tshirt.
-                    Assistant: Sure, which color are you interested in?
-                    User: black.
-                    Assistant: Here are 3 options
-                    1. Adidas black tshirt XL
-                    2. Nike black tshirt L
-                    3. Puma black tshirt M
-                    User: I am interested in the first one.
+                    User: I need a new job.
+                    Assistant: To better assist you in finding relevant engineering job opportunities, could you please provide some more details? What specific type of engineering role are you interested in (software, mechanical, civil, etc.)? Do you have a preferred location or are you open to remote opportunities? Any particular industry or company you’d like to target? The more specifics you can provide, the better I can narrow down the options from the opportunities I have available.
+                    User: software.
                 </input>
                 <output>
-                    "Adidas black tshirt XL"
+                    "Software engineering job"
                 </output>
+            </example>
+            <example>
+                <input>
+                    User: I need a software engineering job.
+                    Assistant: Here are some relevant software engineering job opportunities in Bengaluru that I can suggest based on the provided contexts:
+                        Staff Software Engineer
+                        Software Engineer
+                        Senior Software Engineer in Test
+                    User: Give me details about the third option.
+                </input>
+                <output>
+                    "Senior Software Engineer in Test"
+                </output>
+            </example>
         </examples>
 
-        If there are multiple products, provide all their names. If there is no specific product, give as much details about what the user is looking for.
+        If there are multiple subjects, provide them all. If there is no specific subject, give as much details and characteristics about what the user is looking for.
         Format your answer as a single line of text.
         """.format(formatted_conversation)
 
@@ -118,7 +127,7 @@ def get_rag_query(conversation, user_msg_id, chat_input):
         ],
         model_id,
         instruction="""
-            You are an helpful assistant that is trying to understand what product the user is talking about.
+            You are an helpful assistant that whose job is to understand what the user is enquirying about.
         """,
         stream=False,
     )
